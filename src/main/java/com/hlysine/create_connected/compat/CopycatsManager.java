@@ -119,9 +119,12 @@ public class CopycatsManager {
     }
 
     public static void enqueueMigration(Level level, BlockPos pos) {
-        migrationQueue
-                .computeIfAbsent(level, $ -> Collections.synchronizedSet(new LinkedHashSet<>()))
-                .add(pos);
+        synchronized (migrationQueue) {
+            Set<BlockPos> list = migrationQueue.computeIfAbsent(level, $ -> Collections.synchronizedSet(new LinkedHashSet<>()));
+            synchronized (list) {
+                list.add(pos);
+            }
+        }
     }
 
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
