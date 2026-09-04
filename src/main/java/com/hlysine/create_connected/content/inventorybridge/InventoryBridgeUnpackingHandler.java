@@ -32,7 +32,7 @@ public enum InventoryBridgeUnpackingHandler implements UnpackingHandler {
         BlockState negativeState = level.getBlockState(negativePos);
         BlockState positiveState = level.getBlockState(positivePos);
 
-        if (negativeState.is(AllBlocks.MECHANICAL_CRAFTER)) {
+        if (negativeState.is(AllBlocks.MECHANICAL_CRAFTER.get())) {
             boolean filterPass = true;
             for (ItemStack item : items) {
                 if (!bridgeBE.negativeFilter.test(item)) {
@@ -43,7 +43,7 @@ public enum InventoryBridgeUnpackingHandler implements UnpackingHandler {
             if (filterPass && CrafterUnpackingHandler.INSTANCE.unpack(level, negativePos, negativeState, negativeTarget, copyItems(items), orderContext, true))
                 return CrafterUnpackingHandler.INSTANCE.unpack(level, negativePos, negativeState, negativeTarget, items, orderContext, simulate);
         }
-        if (positiveState.is(AllBlocks.MECHANICAL_CRAFTER)) {
+        if (positiveState.is(AllBlocks.MECHANICAL_CRAFTER.get())) {
             boolean filterPass = true;
             for (ItemStack item : items) {
                 if (!bridgeBE.positiveFilter.test(item)) {

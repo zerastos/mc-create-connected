@@ -26,7 +26,7 @@ public enum InventoryAccessPortUnpackingHandler implements UnpackingHandler {
         BlockPos targetPos = pos.relative(targetDirection);
         BlockState targetState = level.getBlockState(targetPos);
 
-        if (targetState.is(AllBlocks.MECHANICAL_CRAFTER)) {
+        if (targetState.is(AllBlocks.MECHANICAL_CRAFTER.get())) {
             return CrafterUnpackingHandler.INSTANCE.unpack(level, targetPos, targetState, targetDirection, items, orderContext, simulate);
         } else {
             return DEFAULT.unpack(level, pos, state, side, items, orderContext, simulate);
