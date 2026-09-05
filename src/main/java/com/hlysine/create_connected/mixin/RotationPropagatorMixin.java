@@ -1,7 +1,9 @@
 package com.hlysine.create_connected.mixin;
 
+import com.hlysine.create_connected.config.FeatureToggle;
 import com.hlysine.create_connected.content.IConnectionForwardingBlock;
 import com.hlysine.create_connected.content.ISplitShaftBlockEntity;
+import com.hlysine.create_connected.registries.CCBlocks;
 import com.simibubi.create.content.kinetics.RotationPropagator;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -36,6 +38,7 @@ public abstract class RotationPropagatorMixin {
             at = @At("RETURN")
     )
     private static void forwardConnection(KineticBlockEntity be, CallbackInfoReturnable<List<BlockPos>> cir) {
+        if (!FeatureToggle.isEnabled(CCBlocks.CROSS_CONNECTOR.getId())) return;
         List<BlockPos> originalPositions = cir.getReturnValue();
         List<BlockPos> positions = new ArrayList<>(originalPositions);
         for (int i = 0; i < positions.size(); i++) {

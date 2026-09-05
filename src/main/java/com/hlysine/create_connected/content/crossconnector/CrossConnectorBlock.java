@@ -1,5 +1,7 @@
 package com.hlysine.create_connected.content.crossconnector;
 
+import com.hlysine.create_connected.config.FeatureToggle;
+import com.hlysine.create_connected.registries.CCBlocks;
 import com.hlysine.create_connected.registries.CCShapes;
 import com.hlysine.create_connected.content.IConnectionForwardingBlock;
 import com.hlysine.create_connected.content.KineticHelper;
@@ -115,6 +117,7 @@ public class CrossConnectorBlock extends Block implements IWrenchable, IConnecti
     }
 
     public void updateConnections(Level level, BlockPos pos, BlockState state) {
+        if (!FeatureToggle.isEnabled(CCBlocks.CROSS_CONNECTOR.getId())) return;
         if (!level.isClientSide()) {
             Direction.Axis axis = state.getValue(AXIS);
             for (Direction direction : Iterate.directions) {
@@ -149,6 +152,7 @@ public class CrossConnectorBlock extends Block implements IWrenchable, IConnecti
 
     @Override
     public BlockPos forwardConnection(Level level, BlockPos sourcePos, BlockState sourceState, BlockPos neighbourPos) {
+        if (!FeatureToggle.isEnabled(CCBlocks.CROSS_CONNECTOR.getId())) return neighbourPos;
         BlockState state = level.getBlockState(neighbourPos);
         if (state.getBlock() != this)
             return neighbourPos;
