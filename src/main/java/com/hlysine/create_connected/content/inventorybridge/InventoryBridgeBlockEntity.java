@@ -121,9 +121,9 @@ public class InventoryBridgeBlockEntity extends SmartBlockEntity {
 
     @Nullable
     public InventoryIdentifier getInventoryId() {
-        // best we can do is identify as one of the two connected inventory
-        // not currently possible to completely dedupe inventory contents in stock networks
-        IdentifiedInventory inv = negativeInventory.getIdentifiedInventory();
+        // A bridge can only approximate the identity when both sides are attached.
+        IdentifiedInventory inv = isAttachedNegative() ? negativeInventory.getIdentifiedInventory() : null;
+        if (inv == null && isAttachedPositive())  inv = positiveInventory.getIdentifiedInventory();
         return inv == null ? null : inv.identifier();
     }
 
