@@ -65,7 +65,7 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
     @Override
     protected void updateConnectivity() {
         updateConnectivity = false;
-        if (level.isClientSide)
+        if (level == null || level.isClientSide)
             return;
         if (!isController())
             return;
@@ -177,6 +177,7 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
     public FluidVesselBlockEntity getControllerBE() {
         if (isController())
             return this;
+        if (level == null) return null;
         BlockEntity blockEntity = level.getBlockEntity(controller);
         if (blockEntity instanceof FluidVesselBlockEntity)
             return (FluidVesselBlockEntity) blockEntity;
@@ -185,7 +186,7 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
 
     @Override
     public void removeController(boolean keepFluids) {
-        if (level.isClientSide)
+        if (level == null || level.isClientSide)
             return;
         updateConnectivity = true;
         if (!keepFluids)
@@ -536,7 +537,7 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
             state = state.setValue(POSITIVE, axis == Axis.X
                     ? getController().getX() + height - 1 == getBlockPos().getX()
                     : getController().getZ() + height - 1 == getBlockPos().getZ());
-            level.setBlock(getBlockPos(), state, 6);
+            if (level != null) level.setBlock(getBlockPos(), state, 6);
         }
         if (isController())
             setWindows(window);
