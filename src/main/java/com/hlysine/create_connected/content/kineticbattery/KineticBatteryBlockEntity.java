@@ -126,6 +126,7 @@ public class KineticBatteryBlockEntity extends GeneratingKineticBlockEntity impl
             }
             switchToBlockState(getLevel(), getBlockPos(), getBlockState().setValue(LEVEL, crudeLevel));
         }
+        setChanged();
         sendData();
     }
 
@@ -194,7 +195,7 @@ public class KineticBatteryBlockEntity extends GeneratingKineticBlockEntity impl
     @Override
     protected void read(CompoundTag compound, boolean clientPacket) {
         super.read(compound, clientPacket);
-        batteryLevel = compound.getFloat("batteryLevel");
+        batteryLevel = compound.getDouble("batteryLevel");
         queuedSync = compound.getBoolean("queuedSync");
     }
 
