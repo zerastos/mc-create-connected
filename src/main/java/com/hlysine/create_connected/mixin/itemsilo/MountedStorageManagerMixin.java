@@ -1,6 +1,8 @@
 package com.hlysine.create_connected.mixin.itemsilo;
 
+import com.hlysine.create_connected.config.FeatureToggle;
 import com.hlysine.create_connected.content.itemsilo.ItemSiloMountedStorage;
+import com.hlysine.create_connected.registries.CCBlocks;
 import com.simibubi.create.api.contraption.storage.item.MountedItemStorage;
 import com.simibubi.create.content.contraptions.MountedStorageManager;
 import net.createmod.catnip.nbt.NBTHelper;
@@ -28,6 +30,7 @@ public abstract class MountedStorageManagerMixin {
             )
     )
     private void readLegacy(CompoundTag nbt, CallbackInfo ci) {
+        if (!FeatureToggle.isEnabled(CCBlocks.ITEM_SILO.getId())) return;
         NBTHelper.iterateCompoundList(nbt.getList("Storage", Tag.TAG_COMPOUND), tag -> {
             BlockPos pos = NbtUtils.readBlockPos(tag.getCompound("Pos"));
             CompoundTag data = tag.getCompound("Data");

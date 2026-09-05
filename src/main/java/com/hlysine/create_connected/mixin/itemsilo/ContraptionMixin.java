@@ -1,7 +1,9 @@
 package com.hlysine.create_connected.mixin.itemsilo;
 
 import com.google.common.collect.Multimap;
+import com.hlysine.create_connected.config.FeatureToggle;
 import com.hlysine.create_connected.content.itemsilo.ItemSiloBlock;
+import com.hlysine.create_connected.registries.CCBlocks;
 import com.simibubi.create.content.contraptions.Contraption;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -39,7 +41,8 @@ public abstract class ContraptionMixin {
             require = 0
     )
     private void fixNBT(Level world, CompoundTag nbt, boolean spawnData, CallbackInfo ci) {
-        if (create_connected$capturedMultiblocks == null) {
+        if (!FeatureToggle.isEnabled(CCBlocks.ITEM_SILO.getId())) return;
+        if (create_connected$capturedMultiblocks.isEmpty()) {
             try {
                 create_connected$capturedMultiblocks = Optional.of(Contraption.class.getDeclaredField("capturedMultiblocks"));
             } catch (NoSuchFieldException e) {
