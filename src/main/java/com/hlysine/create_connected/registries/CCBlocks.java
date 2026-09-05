@@ -922,11 +922,12 @@ public class CCBlocks {
                             .build()))
             .onRegister(connectedTextures(ItemSiloCTBehaviour::new))
             .transform(MountedItemStorageType.mountedItemStorage(CCMountedStorageTypes.SILO))
+            /*
             .onRegister(b -> BlockMovementChecks.registerAttachedCheck((state, world, pos, direction) -> {
                 if (state.getBlock() instanceof ItemSiloBlock)
                     return BlockMovementChecks.CheckResult.of(ConnectivityHandler.isConnected(world, pos, pos.relative(direction)));
                 return BlockMovementChecks.CheckResult.PASS;
-            }))
+            }))*/
             .item(ItemSiloItem::new)
             .build()
             .register();
