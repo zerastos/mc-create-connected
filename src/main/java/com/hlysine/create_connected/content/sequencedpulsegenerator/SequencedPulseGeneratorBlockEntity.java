@@ -98,6 +98,10 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
     }
 
     private void executeInstruction(boolean allowImmediate, int recursionDepth) {
+        int previousInstruction = currentInstruction;
+        int previousSignal = currentSignal;
+        if (recursionDepth == 0) finishInstructionTick(previousInstruction, previousSignal);
+
         Instruction instruction = getCurrentInstruction();
         if (instruction == null) {
             currentInstruction = -1;
@@ -131,9 +135,16 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
         } else {
             infiniteLoopCounter = 0;
         }
-        if (recursionDepth == 0) {
-            notifyUpdate();
-        }
+        if (recursionDepth == 0) finishInstructionTick(previousInstruction, previousSignal);
+    }
+
+    private void finishInstructionTick(int previousInstruction, int previousSignal) {
+        setChanged();
+
+        boolean instructionChanged = previousInstruction != currentInstruction;
+        if (instructionChanged && level != null) level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
+
+        if (instructionChanged || previousSignal != currentSignal) sendData();
     }
 
     @Override
@@ -175,11 +186,17 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
     }
 
     public void reset() {
+        int previousInstruction = currentInstruction;
         resetAllInstructions();
         currentInstruction = -1;
         infiniteLoopCounter = 0;
         currentSignal = 0;
         applySignal();
+
+        if (previousInstruction != currentInstruction && level != null) {
+            level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
+        }
+
         notifyUpdate();
     }
 
