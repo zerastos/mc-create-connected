@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Mixin(value = ClientSchematicLoader.class, remap = false)
 public class ClientSchematicLoaderMixin {
@@ -34,15 +35,19 @@ public class ClientSchematicLoaderMixin {
         try {
             boolean canRecurse = depth < CServer.SchematicsNestingDepth.get();
             Path base = Path.of("schematics/");
-            Files.list(Path.of(folder))
-                    .forEach(path -> {
-                        if (Files.isDirectory(path)) {
-                            if (canRecurse && (depth != 0 || !path.getFileName().toString().equals("uploaded")))
-                                cc$searchInSubfolder(path.toString(), depth + 1);
-                        } else if (depth != 0 && path.getFileName().toString().endsWith(".nbt")) {
-                            availableSchematics.add(Component.literal(base.relativize(path).toString().replace('\\', '/')));
-                        }
-                    });
+            try (Stream<Path> paths = Files.list(Path.of(folder))) {
+                paths.forEach(path -> {
+                    if (Files.isDirectory(path)) {
+                        if (canRecurse
+                                && (depth != 0 || !path.getFileName().toString().equals("uploaded")))
+                            cc$searchInSubfolder(path.toString(), depth + 1);
+                    } else if (depth != 0 && path.getFileName().toString().endsWith(".nbt")) {
+                        availableSchematics.add(Component.literal(
+                                base.relativize(path).toString().replace('\\', '/')
+                        ));
+                    }
+                });
+            }
         } catch (NoSuchFileException e) {
             // No Schematics created yet
         } catch (IOException e) {
