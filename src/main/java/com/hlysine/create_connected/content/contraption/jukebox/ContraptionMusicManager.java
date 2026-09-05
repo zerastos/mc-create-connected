@@ -10,11 +10,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.RecordItem;
 
 import javax.annotation.Nullable;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ContraptionMusicManager {
-    private static final Map<Pair<Integer, BlockPos>, SoundInstance> playingContraptionRecords = new HashMap<>();
+    private static final Map<Pair<Integer, BlockPos>, WeakReference<SoundInstance>> playingContraptionRecords = new HashMap<>();
 
     public static void playContraptionMusic(@Nullable SoundEvent soundEvent,
                                             AbstractContraptionEntity entity,
@@ -23,11 +24,11 @@ public class ContraptionMusicManager {
                                             @Nullable RecordItem recordItem,
                                             boolean silent) {
         Pair<Integer, BlockPos> contraption = Pair.of(entity.getId(), localPos);
-        SoundInstance soundInstance = playingContraptionRecords.get(contraption);
-        if (soundInstance != null) {
-            Minecraft.getInstance().getSoundManager().stop(soundInstance);
-            playingContraptionRecords.remove(contraption);
-        }
+        playingContraptionRecords.entrySet().removeIf(entry -> entry.getValue().get() == null);
+
+        WeakReference<SoundInstance> previous = playingContraptionRecords.remove(contraption);
+        SoundInstance soundInstance = previous == null ? null : previous.get();
+        if (soundInstance != null) Minecraft.getInstance().getSoundManager().stop(soundInstance);
 
         if (soundEvent != null) {
             if (recordItem != null && !silent) {
@@ -46,9 +47,12 @@ public class ContraptionMusicManager {
                     entity,
                     localPos
             );
-            playingContraptionRecords.put(contraption, newInstance);
+            playingContraptionRecords.put(contraption, new WeakReference<>(newInstance));
             Minecraft.getInstance().getSoundManager().play(newInstance);
         }
-        Minecraft.getInstance().levelRenderer.notifyNearbyEntities(Minecraft.getInstance().level, worldPos, soundEvent != null);
+
+        if (Minecraft.getInstance().level != null) {
+            Minecraft.getInstance().levelRenderer.notifyNearbyEntities(Minecraft.getInstance().level, worldPos, soundEvent != null);
+        }
     }
 }

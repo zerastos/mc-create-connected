@@ -80,7 +80,7 @@ public class JukeboxInteractionBehaviour extends MovingInteractionBehaviour {
             public void levelEvent(@Nullable Player player, int type, BlockPos pos, int data) {
                 if (type == 1010 || type == 1011)
                     CCPackets.getChannel().send(
-                            PacketDistributor.DIMENSION.with(this::dimension),
+                            PacketDistributor.TRACKING_ENTITY.with(() -> contraptionEntity),
                             new PlayContraptionJukeboxPacket(dimension().location(),
                                     contraptionEntity.getId(),
                                     contraptionPos,
