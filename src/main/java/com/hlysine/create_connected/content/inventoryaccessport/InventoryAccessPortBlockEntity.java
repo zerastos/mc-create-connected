@@ -1,6 +1,5 @@
 package com.hlysine.create_connected.content.inventoryaccessport;
 
-import com.hlysine.create_connected.registries.CCBlockEntityTypes;
 import com.simibubi.create.api.packager.InventoryIdentifier;
 import com.simibubi.create.content.logistics.packager.IdentifiedInventory;
 import com.simibubi.create.content.redstone.DirectedDirectionalBlock;
@@ -21,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -51,7 +51,29 @@ public class InventoryAccessPortBlockEntity extends SmartBlockEntity {
     public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
         CapManipulationBehaviourBase.InterfaceProvider towardBlockFacing =
                 (w, p, s) -> new BlockFace(p, DirectedDirectionalBlock.getTargetDirection(s));
-        behaviours.add(observedInventory = new InvManipulationBehaviour(this, towardBlockFacing));
+        behaviours.add(observedInventory = new InvManipulationBehaviour(this, towardBlockFacing) {
+            private LazyOptional<IItemHandler> listenedCapability = LazyOptional.empty();
+
+            @Override
+            public void findNewCapability() {
+                super.findNewCapability();
+                handlerDirty = true;
+
+                if (targetCapability.isPresent() && targetCapability != listenedCapability) {
+                    listenedCapability = targetCapability;
+                    WeakReference<InventoryAccessPortBlockEntity> owner =
+                            new WeakReference<>(InventoryAccessPortBlockEntity.this);
+
+                    targetCapability.addListener(ignored -> {
+                        InventoryAccessPortBlockEntity be = owner.get();
+                        if (be != null) {
+                            be.cachedHandler = null;
+                            be.handlerDirty = true;
+                        }
+                    });
+                }
+            }
+        });
     }
 
     public boolean isAttached() {
@@ -117,20 +139,30 @@ public class InventoryAccessPortBlockEntity extends SmartBlockEntity {
     }
 
     private void initCapability() {
+        if (itemCapability.isPresent()) return;
         itemCapability = LazyOptional.of(InventoryAccessHandler::new);
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        cachedHandler = null;
+        handlerDirty = true;
+        itemCapability.invalidate();
     }
 
     private class InventoryAccessHandler implements WrappedItemHandler {
 
-        private static boolean inRecursion = false;
+        private static final ThreadLocal<Boolean> RECURSION_GUARD = ThreadLocal.withInitial(() -> false);
 
         private <T> T preventRecursion(Supplier<T> value, T defaultValue) {
-            if (inRecursion) return defaultValue;
-            inRecursion = true;
+            if (RECURSION_GUARD.get()) return defaultValue;
+
+            RECURSION_GUARD.set(true);
             try {
                 return value.get();
             } finally {
-                inRecursion = false;
+                RECURSION_GUARD.remove();
             }
         }
 

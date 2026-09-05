@@ -1,6 +1,5 @@
 package com.hlysine.create_connected.content.inventorybridge;
 
-import com.hlysine.create_connected.registries.CCBlockEntityTypes;
 import com.hlysine.create_connected.content.inventoryaccessport.WrappedItemHandler;
 import com.simibubi.create.api.packager.InventoryIdentifier;
 import com.simibubi.create.content.logistics.packager.IdentifiedInventory;
@@ -23,6 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -64,8 +64,53 @@ public class InventoryBridgeBlockEntity extends SmartBlockEntity {
                 (w, p, s) -> new BlockFace(p, InventoryBridgeBlock.getNegativeTarget(s));
         CapManipulationBehaviourBase.InterfaceProvider towardBlockFacing2 =
                 (w, p, s) -> new BlockFace(p, InventoryBridgeBlock.getPositiveTarget(s));
-        behaviours.add(negativeInventory = new InvManipulationBehaviour(this, towardBlockFacing1));
-        behaviours.add(positiveInventory = new InvManipulationBehaviour(this, towardBlockFacing2));
+
+        behaviours.add(negativeInventory = new InvManipulationBehaviour(this, towardBlockFacing1) {
+            private LazyOptional<IItemHandler> listenedCapability = LazyOptional.empty();
+
+            @Override
+            public void findNewCapability() {
+                super.findNewCapability();
+                negativeHandlerDirty = true;
+
+                if (targetCapability.isPresent() && targetCapability != listenedCapability) {
+                    listenedCapability = targetCapability;
+                    WeakReference<InventoryBridgeBlockEntity> owner = new WeakReference<>(InventoryBridgeBlockEntity.this);
+
+                    targetCapability.addListener(ignored -> {
+                        InventoryBridgeBlockEntity be = owner.get();
+                        if (be != null) {
+                            be.cachedNegativeHandler = null;
+                            be.negativeHandlerDirty = true;
+                        }
+                    });
+                }
+            }
+        });
+
+        behaviours.add(positiveInventory = new InvManipulationBehaviour(this, towardBlockFacing2) {
+            private LazyOptional<IItemHandler> listenedCapability = LazyOptional.empty();
+
+            @Override
+            public void findNewCapability() {
+                super.findNewCapability();
+                positiveHandlerDirty = true;
+
+                if (targetCapability.isPresent() && targetCapability != listenedCapability) {
+                    listenedCapability = targetCapability;
+                    WeakReference<InventoryBridgeBlockEntity> owner = new WeakReference<>(InventoryBridgeBlockEntity.this);
+
+                    targetCapability.addListener(ignored -> {
+                        InventoryBridgeBlockEntity be = owner.get();
+                        if (be != null) {
+                            be.cachedPositiveHandler = null;
+                            be.positiveHandlerDirty = true;
+                        }
+                    });
+                }
+            }
+        });
+
         behaviours.add(filters = new SidedFilteringBehaviour(
                 this,
                 new InventoryBridgeFilterSlot(),
@@ -169,20 +214,32 @@ public class InventoryBridgeBlockEntity extends SmartBlockEntity {
     }
 
     private void initCapability() {
+        if (itemCapability.isPresent()) return;
         itemCapability = LazyOptional.of(InventoryBridgeHandler::new);
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        cachedNegativeHandler = null;
+        cachedPositiveHandler = null;
+        negativeHandlerDirty = true;
+        positiveHandlerDirty = true;
+        itemCapability.invalidate();
     }
 
     private class InventoryBridgeHandler implements WrappedItemHandler {
 
-        private static boolean inRecursion = false;
+        private static final ThreadLocal<Boolean> RECURSION_GUARD = ThreadLocal.withInitial(() -> false);
 
         private <T> T preventRecursion(Supplier<T> value, T defaultValue) {
-            if (inRecursion) return defaultValue;
-            inRecursion = true;
+            if (RECURSION_GUARD.get()) return defaultValue;
+
+            RECURSION_GUARD.set(true);
             try {
                 return value.get();
             } finally {
-                inRecursion = false;
+                RECURSION_GUARD.remove();
             }
         }
 
