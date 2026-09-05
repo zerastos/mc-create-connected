@@ -1,9 +1,9 @@
 package com.hlysine.create_connected.content.fluidvessel;
 
-import com.hlysine.create_connected.registries.CCBlockEntityTypes;
 import com.simibubi.create.api.connectivity.ConnectivityHandler;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.content.fluids.tank.FluidTankBlockEntity;
+import com.simibubi.create.foundation.blockEntity.ComparatorUtil;
 import com.simibubi.create.foundation.blockEntity.IMultiBlockEntityContainer;
 import com.simibubi.create.foundation.fluid.SmartFluidTank;
 import com.simibubi.create.infrastructure.config.AllConfigs;
@@ -41,6 +41,14 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
 
     // For rendering purposes only
     private LerpedFloat fluidLevel;
+
+    private int lastComparatorLevel = -1;
+    private int lastLitLayerCount = -1;
+    private int lastFluidLightLevel = -1;
+    private int lastLightWidth = -1;
+    private int lastLightHeight = -1;
+    private Axis lastLightAxis;
+    private boolean lastLightReversed;
 
     public FluidVesselBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -93,35 +101,61 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
 
     @Override
     protected void onFluidStackChanged(FluidStack newFluidStack) {
-        if (!hasLevel())
-            return;
+        if (!hasLevel()) return;
 
-        FluidType attributes = newFluidStack.getFluid()
-                .getFluidType();
+        FluidType attributes = newFluidStack.getFluid().getFluidType();
         int luminosity = (int) (attributes.getLightLevel(newFluidStack) / 1.2f);
         boolean reversed = attributes.isLighterThanAir();
         int maxY = (int) ((getFillState() * width) + 1);
         Axis axis = getAxis();
 
-        for (int yOffset = 0; yOffset < width; yOffset++) {
-            boolean isBright = reversed ? (width - yOffset <= maxY) : (yOffset < maxY);
-            int actualLuminosity = isBright ? luminosity : luminosity > 0 ? 1 : 0;
+        int comparatorLevel = ComparatorUtil.fractionToRedstoneLevel(getFillState());
+        boolean topologyChanged =
+                width != lastLightWidth || height != lastLightHeight || axis != lastLightAxis;
+        boolean comparatorChanged =
+                topologyChanged || comparatorLevel != lastComparatorLevel;
+        boolean lightingChanged =
+                topologyChanged
+                        || maxY != lastLitLayerCount
+                        || luminosity != lastFluidLightLevel
+                        || reversed != lastLightReversed;
 
-            for (int lengthOffset = 0; lengthOffset < height; lengthOffset++) {
-                for (int widthOffset = 0; widthOffset < width; widthOffset++) {
-                    BlockPos pos = this.worldPosition.offset(
-                            axis == Axis.X ? lengthOffset : widthOffset,
-                            yOffset,
-                            axis == Axis.Z ? lengthOffset : widthOffset
-                    );
-                    FluidVesselBlockEntity vesselAt = ConnectivityHandler.partAt(getType(), level, pos);
-                    if (vesselAt == null)
-                        continue;
-                    level.updateNeighbourForOutputSignal(pos, vesselAt.getBlockState()
-                            .getBlock());
-                    if (vesselAt.luminosity == actualLuminosity)
-                        continue;
-                    vesselAt.setLuminosity(actualLuminosity);
+        lastComparatorLevel = comparatorLevel;
+        lastLitLayerCount = maxY;
+        lastFluidLightLevel = luminosity;
+        lastLightWidth = width;
+        lastLightHeight = height;
+        lastLightAxis = axis;
+        lastLightReversed = reversed;
+
+        if (!level.isClientSide && (comparatorChanged || lightingChanged)) {
+            for (int yOffset = 0; yOffset < width; yOffset++) {
+                boolean isBright = reversed
+                        ? width - yOffset <= maxY
+                        : yOffset < maxY;
+                int actualLuminosity = isBright ? luminosity : luminosity > 0 ? 1 : 0;
+
+                for (int lengthOffset = 0; lengthOffset < height; lengthOffset++) {
+                    for (int widthOffset = 0; widthOffset < width; widthOffset++) {
+                        BlockPos pos = worldPosition.offset(
+                                axis == Axis.X ? lengthOffset : widthOffset,
+                                yOffset,
+                                axis == Axis.Z ? lengthOffset : widthOffset
+                        );
+
+                        FluidVesselBlockEntity vesselAt =
+                                ConnectivityHandler.partAt(getType(), level, pos);
+                        if (vesselAt == null)
+                            continue;
+
+                        if (comparatorChanged)
+                            level.updateNeighbourForOutputSignal(
+                                    pos, vesselAt.getBlockState().getBlock()
+                            );
+
+                        if (lightingChanged && vesselAt.luminosity != actualLuminosity)
+                            vesselAt.setLuminosity(actualLuminosity);
+                    }
                 }
             }
         }
@@ -133,8 +167,7 @@ public class FluidVesselBlockEntity extends FluidTankBlockEntity implements IHav
 
         if (isVirtual()) {
             if (fluidLevel == null)
-                fluidLevel = LerpedFloat.linear()
-                        .startWithValue(getFillState());
+                fluidLevel = LerpedFloat.linear().startWithValue(getFillState());
             fluidLevel.chase(getFillState(), .5f, LerpedFloat.Chaser.EXP);
         }
     }
