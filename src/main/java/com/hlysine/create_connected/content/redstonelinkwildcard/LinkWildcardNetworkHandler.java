@@ -132,6 +132,7 @@ public class LinkWildcardNetworkHandler {
     }
 
     public static void addToNetwork(RedstoneLinkNetworkHandler handler, LevelAccessor world, IRedstoneLinkable actor) {
+        if (!FeatureToggle.isEnabled(CCItems.REDSTONE_LINK_WILDCARD.getId())) return;
         Couple<Frequency> key = actor.getNetworkKey();
         Map<Couple<Frequency>, Set<Couple<Frequency>>> wildcards = actor.isListening() ? receiversIn(world) : transmittersIn(world);
 //        CreateConnected.LOGGER.debug("Link-Wildcard: New {}: {}", actor.isListening() ? "receiver" : "transmitter", keyToString(key));
@@ -158,6 +159,7 @@ public class LinkWildcardNetworkHandler {
     }
 
     public static void removeFromNetwork(RedstoneLinkNetworkHandler handler, LevelAccessor world, IRedstoneLinkable actor) {
+        if (!FeatureToggle.isEnabled(CCItems.REDSTONE_LINK_WILDCARD.getId())) return;
         Couple<Frequency> key = actor.getNetworkKey();
         Map<Couple<Frequency>, Set<IRedstoneLinkable>> networks = handler.networksIn(world);
         if (networks.containsKey(key) && !networks.get(key).isEmpty())
