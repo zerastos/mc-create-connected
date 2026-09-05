@@ -91,6 +91,7 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
     }
 
     private void applySignal() {
+        if (level == null) return;
         level.setBlock(getBlockPos(), getBlockState().setValue(POWERING, currentSignal > 0), Block.UPDATE_ALL);
         level.updateNeighborsAt(this.worldPosition, this.getBlockState().getBlock());
         level.updateNeighborsAt(this.worldPosition.relative(this.getBlockState().getValue(SequencedPulseGeneratorBlock.FACING).getOpposite()), this.getBlockState().getBlock());
@@ -118,11 +119,11 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
                 executeInstruction(true, recursionDepth + 1);
             } else {
                 infiniteLoopCounter++;
-                if (level.getRandom().nextFloat() < PARTICLE_DENSITY) {
+                if (level != null && level.getRandom().nextFloat() < PARTICLE_DENSITY) {
                     Vec3 loc = Vec3.atBottomCenterOf(getBlockPos());
                     ((ServerLevel) level).sendParticles(ParticleTypes.SMOKE, loc.x, loc.y, loc.z, 2, 0.1, 0, 0.1, 0.01);
                 }
-                if (!level.isClientSide() && infiniteLoopCounter > 101) {
+                if ((level == null || !level.isClientSide()) && infiniteLoopCounter > 101) {
                     infiniteLoopCounter = 0;
                     AdvancementBehaviour.tryAward(this, CCAdvancements.PULSE_GEN_INFINITE_LOOP);
                 }
@@ -139,10 +140,8 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
     public void tick() {
         super.tick();
 
-        if (isIdle())
-            return;
-        if (level.isClientSide)
-            return;
+        if (isIdle()) return;
+        if (level == null || level.isClientSide) return;
 
         executeInstruction(true, 0);
         previousInput = currentInput;
@@ -164,7 +163,7 @@ public class SequencedPulseGeneratorBlockEntity extends SmartBlockEntity {
             previousInput = currentInput;
             return;
         }
-        if (!level.hasNeighborSignal(worldPosition)) {
+        if (level != null && !level.hasNeighborSignal(worldPosition)) {
             level.setBlock(worldPosition, getBlockState().setValue(POWERED, false), 3);
             previousInput = currentInput;
             return;
