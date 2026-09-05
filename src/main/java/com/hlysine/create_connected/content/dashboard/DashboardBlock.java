@@ -81,9 +81,12 @@ public class DashboardBlock extends HorizontalDirectionalBlock implements IWrenc
                     List<ClipboardEntry> entries = ClipboardEntry.getLastViewedEntries(stack);
                     int line = 0;
                     SignText text = be.getText();
+                    clipboardLines:
                     for (ClipboardEntry entry : entries) {
                         for (String string : entry.text.getString()
                                 .split("\n")) {
+                            if (line >= SignText.LINES)
+                                break clipboardLines;
                             text = text.setMessage(line++, Component.literal(string));
                         }
                     }
